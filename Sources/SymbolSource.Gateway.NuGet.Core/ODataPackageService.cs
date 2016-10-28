@@ -41,7 +41,7 @@ namespace SymbolSource.Gateway.NuGet.Core
         private IPackageBackend Backend
         {
             get
-            {                
+            {
                 return BackendFactory.Create(Caller);
             }
         }
@@ -62,13 +62,13 @@ namespace SymbolSource.Gateway.NuGet.Core
             string skip = HttpContext.Current.Request.QueryString["$skip"] ?? "0";
             string top = HttpContext.Current.Request.QueryString["$top"] ?? "1000000";
             return new PackageFilter
-                       {
-                           Where = NuGetTranslator.TranslateFilter(filter),
-                           OrderBy = NuGetTranslator.TranslateFilter(HttpContext.Current.Request.QueryString["$orderby"]),
-                           Skip = int.Parse(skip),
-                           Take = int.Parse(top),
-                           Count = HttpContext.Current.Request.Path.EndsWith("$count")
-                       };
+            {
+                Where = NuGetTranslator.TranslateFilter(filter),
+                OrderBy = NuGetTranslator.TranslateFilter(HttpContext.Current.Request.QueryString["$orderby"]),
+                Skip = int.Parse(skip),
+                Take = int.Parse(top),
+                Count = HttpContext.Current.Request.Path.EndsWith("$count")
+            };
         }
 
         // This method is called only once to initialize service-wide policies.
@@ -109,7 +109,16 @@ namespace SymbolSource.Gateway.NuGet.Core
 
         public Uri GetReadStreamUri(object entity, DataServiceOperationContext operationContext)
         {
-            return null;
+            var package = (Package)entity;
+
+            var rootUrlConfig = System.Configuration.ConfigurationManager.AppSettings["rootUrl"];
+            var rootUrl = !string.IsNullOrWhiteSpace(rootUrlConfig)
+                ? rootUrlConfig
+                : HttpContext.Current.Request.Url.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped);
+
+            // the URI need to ends with a '/' to be correctly merged so we add it to the application if it 
+            var downloadUrl = PackageUtility.GetPackageDownloadUrl(package);
+            return new Uri(new Uri(rootUrl), downloadUrl);
         }
 
         public string GetStreamContentType(object entity, DataServiceOperationContext operationContext)
@@ -160,7 +169,7 @@ namespace SymbolSource.Gateway.NuGet.Core
                     filter.Where = "(" + filter.Where + ") and (substringof(Project, '" + searchTerm + "') or substringof(Name, '" + searchTerm + "'))";
                 else
                     filter.Where = "(substringof(Project, '" + searchTerm + "') or substringof(Name, '" + searchTerm + "'))";
-                
+
                 return GetPackages(filter, v => v.Project.Contains(searchTerm) || v.Name.Contains(searchTerm), null);
             }
 
@@ -219,7 +228,7 @@ namespace SymbolSource.Gateway.NuGet.Core
 
             string filterNames = string.Join(" or ", idValues.Select(i => "Project eq '" + i + "'"));
             var filter = GetFilter();
-            
+
             if(!string.IsNullOrEmpty(filter.Where))
                 filter.Where = "(" + filter.Where + ") and (" + filterNames + ") and (Metadata['IsLatestVersion'] eq 'True')";
             else
