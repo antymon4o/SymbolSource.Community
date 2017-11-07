@@ -11,8 +11,6 @@ namespace SymbolSource.Gateway.NuGet.Core
     {
         public void Push(string url, string key, Stream stream)
         {
-            var server = new PackageServer(url, "SymbolSource");
-            server.PushPackage(key, stream, 5000);
         }
 
         public int Count(string url, NetworkCredential credential)
